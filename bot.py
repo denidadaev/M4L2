@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands, tasks
-from logic import DatabaseManager, hide_img
+from logic import DatabaseManager, hide_img, create_collage 
 from config import TOKEN, DATABASE
 import os
-
+import cv2
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
@@ -68,6 +68,21 @@ async def on_interaction(interaction):
                 await interaction.response.send_message(content="Ты уже получил картинку!", ephemeral=True)
         else:
             await interaction.response.send_message(content="К сожалению, кто-то уже получил эту картинку.", ephemeral=True)
+
+
+
+@bot.message_handler(commands=['get_my_score'])
+def get_my_score(message):
+    user_id = message.from_user.id
+    info = manager.get_winners_img(user_id)
+    prizes = [x[0] for x in info]
+    image_paths = os.listdir('img')
+    image_paths = [f'img/{x}' if x in prizes else f'hidden_img/{x}' for x in image_paths]
+    collage = create_collage(image_paths)
+    cv2.imwrite('collage.jpg', collage)
+    with open('collage.jpg', 'rb') as f:
+        bot.send_photo(message.chat.id, f)
+
 
 @bot.event
 async def on_ready():
