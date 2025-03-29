@@ -3,6 +3,8 @@ from datetime import datetime
 from config import DATABASE 
 import os
 import cv2
+import numpy as np
+from math import sqrt, floor, ceil
 
 class DatabaseManager:
     def __init__(self, database):
@@ -109,18 +111,35 @@ INNER JOIN prizes ON
 winners.prize_id = prizes.prize_id
 WHERE user_id = ?''', (user_id, ))
             return cur.fetchall()
-        
-    def get_rating(self):
-        conn = sqlite3.connect(self.database)
-        with conn:
-            cur = conn.cursor()
-            cur.execute('''
+
+def create_collage(image_paths):
+    images = []
+    for path in image_paths:
+        image = cv2.imread(path)
+        images.append(image)
+
+    num_images = len(images)
+    num_cols = floor(sqrt(num_images)) # Поиск количество картинок по горизонтали
+    num_rows = ceil(num_images/num_cols)  # Поиск количество картинок по вертикали
+        # Создание пустого коллажа
+    collage = np.zeros((num_rows * images[0].shape[0], num_cols * images[0].shape[1], 3), dtype=np.uint8)
+        # Размещение изображений на коллаже
+    for i, image in enumerate(images):
+        row = i // num_cols
+        col = i % num_cols
+        collage[row*image.shape[0]:(row+1)*image.shape[0], col*image.shape[1]:(col+1)*image.shape[1], :] = image
+    return collage
+def get_rating(self):
+    conn = sqlite3.connect(self.database)
+    with conn:
+        cur = conn.cursor()
+        cur.execute('''
 SELECT users.user_name, COUNT(winners.prize_id) as count_prize FROM winners
 INNER JOIN users on users.user_id = winners.user_id
 GROUP BY winners.user_id
 ORDER BY count_prize
 LIMIT 10''')
-            return cur.fetchall()
+        return cur.fetchall()
         
 
 
